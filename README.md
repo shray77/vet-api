@@ -24,15 +24,20 @@ fallback на закоммиченный JSON; GitHub Actions раннеры д�
 | GET | `/v1/insilico/outbreaks` | — | фильтр живого датасета: `?q=&disease=&species=&since=&limit=` |
 | POST | `/v1/insilico/share` | — | сохранить сценарий расчёта → короткий id (10/день/IP, payload ≤24KB, TTL 90д) |
 | GET | `/v1/insilico/share/:id` | — | прочитать сценарий |
-| POST | `/v1/insilico/ai/chat` | — | LLM-прокси (Qwen2.5-Coder-3B через HF router), 40/день/IP, кэш 24ч |
-| POST | `/v1/insilico/ai/esm` | — | ESM-2 fill-mask прокси, те же лимиты |
+| POST | `/v1/insilico/ai/chat` | — | LLM: канал 1 Workers AI (llama-3.3-70b, эдж, без токенов) → канал 2 HF router; 40/день/IP, кэш 24ч |
+| POST | `/v1/insilico/ai/esm` | — | ESM-2 fill-mask прокси (только HF), те же лимиты |
 
 POST-эндпоинты `heatmap/*` требуют `Authorization: Bearer $VET_API_TOKEN`
 (секрет воркера, генерируется `openssl rand -hex 32`).
 
 Insilico-эндпоинты публичны (CORS `*`): лимиты по IP через KV-счётчики.
-Облачный AI включается секретом воркера `HF_TOKEN` (HF-токен с доступом к
-Inference API): без него `/v1/insilico/ai/*` честно отвечает `501 {enabled:false}` —
+Облачный AI работает в два канала:
+1. **Workers AI (эдж)** — биндинг `[ai]` в wrangler.toml, llama-3.3-70b-instruct-fp8-fast.
+   Включён по умолчанию, токенов не требует (free tier ~10k neurons/день).
+2. **HF router** — секрет воркера `HF_TOKEN` (фолбэк для chat и единственный путь
+   для ESM-2 — на эдже нет протеиновой LM).
+
+Нет ни одного канала → `/v1/insilico/ai/*` честно отвечает `501 {enabled:false}` —
 фронт VetInSilico сам падает в фолбэк (токен юзера → детерминированные алгоритмы).
 
 ## Смена секретов воркера

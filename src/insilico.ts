@@ -7,13 +7,14 @@
  *       ?q=&disease=&species=&since=&limit=
  *   POST /v1/insilico/share             — сохранить сценарий расчёта → короткий id
  *   GET  /v1/insilico/share/:id         — прочитать сценарий
- *   POST /v1/insilico/ai/chat           — LLM-прокси (HF router, секрет HF_TOKEN)
- *   POST /v1/insilico/ai/esm            — ESM-2 fill-mask прокси (HF router)
+ *   POST /v1/insilico/ai/chat           — LLM: канал 1 Workers AI (эдж, без токенов) → канал 2 HF router
+ *   POST /v1/insilico/ai/esm            — ESM-2 fill-mask прокси (HF router, секрет HF_TOKEN)
  *
  * Принципы:
  *   - Чтение — публично (CORS *), запись/ML — с лимитами по IP (KV-счётчики).
- *   - AI выключен честно: без секрета HF_TOKEN → 501 {enabled:false},
- *     фронт сам падает в фолбэк (свой токен юзера → детерминированные алгоритмы).
+ *   - AI: канал 1 — Workers AI (эдж-биндинг, бесплатно, без токенов), канал 2 — HF
+ *     router (секрет HF_TOKEN; единственный путь для ESM-2). Нет ни одного →
+ *     честный 501, фронт сам падает в фолбэк (свой токен → детерминированные алгоритмы).
  *   - Ответы ML кешируются в KV (24ч) — экономия кредитов upstream.
  *   - share: payload ≤ 24KB, TTL 90 дней, 10 записей/день/IP.
  */
@@ -21,6 +22,9 @@ import type { OutbreakDataset } from "./merge";
 
 export interface InsilicoEnv {
   VET_KV: KVNamespace;
+  /** Workers AI (эдж-биндинг [ai] в wrangler.toml): LLM без внешних токенов. */
+  AI?: unknown;
+  /** Опциональный секрет: HF-фолбэк (нужен прежде всего для ESM-2 — у эджа протеиновой LM нет). */
   HF_TOKEN?: string;
 }
 
@@ -79,6 +83,9 @@ async function rateLimit(env: InsilicoEnv, domain: string, req: Request, max: nu
   return true;
 }
 
+/** Эдж-LLM на Workers AI: free tier ~10k neurons/день, ноль внешних токенов. */
+const WA_LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+/** HF-фолбэк (и путь для ESM-2). */
 const LLM_MODEL = "Qwen/Qwen2.5-Coder-3B-Instruct";
 const ESM_MODEL_DEFAULT = "facebook/esm2_t12_35M_UR50D";
 const AI_DAILY_LIMIT = 40;
@@ -121,8 +128,9 @@ export async function handleInsilico(
       ok: true,
       service: "vet-api/insilico",
       kv,
-      ai: Boolean(env.HF_TOKEN),
-      aiModel: LLM_MODEL,
+      ai: Boolean(env.AI) || Boolean(env.HF_TOKEN),
+      aiBackend: env.AI ? "workers-ai" : env.HF_TOKEN ? "hf" : "off",
+      aiModel: env.AI ? WA_LLM_MODEL : LLM_MODEL,
       outbreaks,
       outbreaksUpdated: updated,
       ms: Date.now() - t0,
@@ -231,7 +239,27 @@ export async function handleInsilico(
   return null; // не наш путь — отдаём наверх (404 корневого роутера)
 }
 
-/* ---------- AI прокси (HF router) ---------- */
+/* ---------- AI: канал 1 Workers AI (эдж) → канал 2 HF router → честный отказ ---------- */
+
+/** Вызов эдж-LLM (Workers AI). env.AI к моменту вызова уже проверен. */
+async function waChat(
+  env: InsilicoEnv,
+  messages: { role: string; content: string }[],
+  maxTokens: number,
+  temperature: number,
+): Promise<string> {
+  const ai = env.AI as unknown as {
+    run: (model: string, input: Record<string, unknown>) => Promise<unknown>;
+  };
+  const out = (await ai.run(WA_LLM_MODEL, {
+    messages,
+    max_tokens: maxTokens,
+    temperature,
+  })) as { response?: unknown };
+  const text = typeof out?.response === "string" ? out.response.trim() : "";
+  if (!text) throw new Error("пустой ответ модели");
+  return text;
+}
 
 async function handleAi(
   req: Request,
@@ -240,12 +268,6 @@ async function handleAi(
   t0: number,
   kind: "chat" | "esm",
 ): Promise<Response> {
-  if (!env.HF_TOKEN) {
-    return json(
-      { ok: false, enabled: false, error: "cloud AI отключён (HF_TOKEN не задан)", hint: "используйте свой HF token" },
-      501,
-    );
-  }
   if (!(await rateLimit(env, `ai-${kind}`, req, AI_DAILY_LIMIT))) {
     return json({ ok: false, error: `rate limit exceeded (${AI_DAILY_LIMIT}/day)` }, 429);
   }
@@ -260,6 +282,48 @@ async function handleAi(
     return json({ ...JSON.parse(cached), cached: true, ms: Date.now() - t0 }, 200, {
       "cache-control": "public, max-age=300",
     });
+  }
+
+  /* ----- канал 1: Workers AI (эдж) — только chat, бесплатно и без токенов ----- */
+  if (kind === "chat" && env.AI) {
+    const b = body as { messages?: unknown; maxTokens?: number; temperature?: number };
+    if (Array.isArray(b.messages) && b.messages.length > 0) {
+      try {
+        const content = await waChat(
+          env,
+          b.messages as { role: string; content: string }[],
+          clampNum(b.maxTokens, 1, 1024, 512),
+          clampNum(b.temperature, 0, 2, 0.3),
+        );
+        const out = { ok: true, kind, content, backend: "workers-ai" };
+        ctx.waitUntil(env.VET_KV.put(cacheKey, JSON.stringify(out), { expirationTtl: AI_CACHE_TTL }));
+        return json({ ...out, cached: false, ms: Date.now() - t0 }, 200);
+      } catch (e) {
+        if (!env.HF_TOKEN) {
+          // эдж упал, HF-фолбэка нет — честная ошибка (фронт уйдёт в свой токен/эвристики)
+          return json(
+            { ok: false, backend: "workers-ai", error: `edge AI failed: ${String(e).slice(0, 140)}` },
+            502,
+          );
+        }
+        // HF_TOKEN задан — падаем в канал 2 ниже
+      }
+    }
+  }
+
+  if (!env.HF_TOKEN) {
+    return json(
+      {
+        ok: false,
+        enabled: false,
+        error:
+          kind === "chat"
+            ? "cloud AI отключён (нет AI-биндинга и HF_TOKEN)"
+            : "ESM-2 в облаке требует HF_TOKEN (на эдже нет протеиновой LM)",
+        hint: "в режиме «Авто» фронт сам уйдёт в свой HF-токен или локальные эвристики",
+      },
+      501,
+    );
   }
 
   let upstreamUrl: string;

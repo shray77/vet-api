@@ -24,7 +24,9 @@ import { handleInsilico } from "./insilico";
 export interface Env {
   VET_KV: KVNamespace;
   VET_API_TOKEN: string;
-  /** Секрет (опционально): включает облачный AI-прокси /v1/insilico/ai/*. */
+  /** Workers AI (эдж): включает LLM-канал /v1/insilico/ai/chat без внешних токенов. */
+  AI?: unknown;
+  /** Секрет (опционально): HF-фолбэк для chat + единственный облачный путь для ESM-2. */
   HF_TOKEN?: string;
 }
 

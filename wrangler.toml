@@ -6,3 +6,7 @@ workers_dev = true
 [[kv_namespaces]]
 binding = "VET_KV"
 id = "209d8f20af1f45519eac0b448919f1d1"
+
+# Workers AI (эдж): LLM-канал без внешних токенов. Free tier ~10k neurons/день.
+[ai]
+binding = "AI"

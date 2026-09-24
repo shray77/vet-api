@@ -1,0 +1,398 @@
+{
+  "region": "Ростовская область",
+  "bbox": {
+    "minLat": 46.6,
+    "maxLat": 49.5,
+    "minLon": 37.5,
+    "maxLon": 43.8
+  },
+  "stations": [
+    {
+      "id": "rostov",
+      "name": "Ростов-на-Дону",
+      "lat": 47.23,
+      "lon": 39.72,
+      "alt": 50
+    },
+    {
+      "id": "taganrog",
+      "name": "Таганрог",
+      "lat": 47.21,
+      "lon": 38.93,
+      "alt": 30
+    },
+    {
+      "id": "shakhty",
+      "name": "Шахты",
+      "lat": 47.71,
+      "lon": 40.21,
+      "alt": 250
+    },
+    {
+      "id": "volgodonsk",
+      "name": "Волгодонск",
+      "lat": 47.51,
+      "lon": 42.15,
+      "alt": 60
+    },
+    {
+      "id": "novocherkassk",
+      "name": "Новочеркасск",
+      "lat": 47.42,
+      "lon": 40.09,
+      "alt": 110
+    },
+    {
+      "id": "bataysk",
+      "name": "Батайск",
+      "lat": 47.14,
+      "lon": 39.75,
+      "alt": 40
+    },
+    {
+      "id": "azov",
+      "name": "Азов",
+      "lat": 47.11,
+      "lon": 39.42,
+      "alt": 15
+    },
+    {
+      "id": "salsk",
+      "name": "Сальск",
+      "lat": 46.48,
+      "lon": 41.54,
+      "alt": 80
+    },
+    {
+      "id": "millerovo",
+      "name": "Миллерово",
+      "lat": 48.92,
+      "lon": 40.4,
+      "alt": 200
+    },
+    {
+      "id": "morozovsk",
+      "name": "Морозовск",
+      "lat": 48.35,
+      "lon": 41.83,
+      "alt": 120
+    },
+    {
+      "id": "belaya_kalitva",
+      "name": "Белая Калитва",
+      "lat": 48.17,
+      "lon": 40.8,
+      "alt": 130
+    },
+    {
+      "id": "zernograd",
+      "name": "Зерноград",
+      "lat": 46.85,
+      "lon": 40.3,
+      "alt": 90
+    },
+    {
+      "id": "semikarakorsk",
+      "name": "Семикаракорск",
+      "lat": 47.52,
+      "lon": 40.83,
+      "alt": 60
+    },
+    {
+      "id": "konstantinovsk",
+      "name": "Константиновск",
+      "lat": 47.63,
+      "lon": 41.09,
+      "alt": 70
+    },
+    {
+      "id": "vyoshenskaya",
+      "name": "Вёшенская",
+      "lat": 49.62,
+      "lon": 41.72,
+      "alt": 120
+    },
+    {
+      "id": "ust_donetsk",
+      "name": "Усть-Донецкий",
+      "lat": 47.85,
+      "lon": 40.9,
+      "alt": 80
+    },
+    {
+      "id": "bagayevskaya",
+      "name": "Багаевская",
+      "lat": 47.32,
+      "lon": 40.37,
+      "alt": 25
+    },
+    {
+      "id": "bokovskaya",
+      "name": "Боковская",
+      "lat": 49.23,
+      "lon": 41.83,
+      "alt": 80
+    },
+    {
+      "id": "kazanskaya",
+      "name": "Казанская",
+      "lat": 49.67,
+      "lon": 41.05,
+      "alt": 90
+    },
+    {
+      "id": "veselyy",
+      "name": "Весёлый",
+      "lat": 47.09,
+      "lon": 40.74,
+      "alt": 40
+    },
+    {
+      "id": "romanovskaya",
+      "name": "Романовская",
+      "lat": 47.54,
+      "lon": 42.02,
+      "alt": 40
+    },
+    {
+      "id": "dubovskoye",
+      "name": "Дубовское",
+      "lat": 47.41,
+      "lon": 42.76,
+      "alt": 75
+    },
+    {
+      "id": "yegorlykskaya",
+      "name": "Егорлыкская",
+      "lat": 46.5,
+      "lon": 40.63,
+      "alt": 90
+    },
+    {
+      "id": "zavetnoye",
+      "name": "Заветное",
+      "lat": 47.13,
+      "lon": 43.9,
+      "alt": 70
+    },
+    {
+      "id": "zimovniki",
+      "name": "Зимовники",
+      "lat": 47.14,
+      "lon": 42.47,
+      "alt": 90
+    },
+    {
+      "id": "kagalnitskaya",
+      "name": "Кагальницкая",
+      "lat": 46.88,
+      "lon": 40.15,
+      "alt": 75
+    },
+    {
+      "id": "kashary",
+      "name": "Кашары",
+      "lat": 49.04,
+      "lon": 41.01,
+      "alt": 100
+    },
+    {
+      "id": "krasny_sulin",
+      "name": "Красный Сулин",
+      "lat": 47.89,
+      "lon": 40.06,
+      "alt": 175
+    },
+    {
+      "id": "kuybyshevo",
+      "name": "Куйбышево",
+      "lat": 47.81,
+      "lon": 38.91,
+      "alt": 90
+    },
+    {
+      "id": "bol_martynovka",
+      "name": "Большая Мартыновка",
+      "lat": 47.27,
+      "lon": 41.67,
+      "alt": 80
+    },
+    {
+      "id": "matveev_kurgan",
+      "name": "Матвеев Курган",
+      "lat": 47.57,
+      "lon": 38.86,
+      "alt": 90
+    },
+    {
+      "id": "chaltyr",
+      "name": "Чалтырь",
+      "lat": 47.28,
+      "lon": 39.5,
+      "alt": 70
+    },
+    {
+      "id": "pokrovskoye",
+      "name": "Покровское",
+      "lat": 47.41,
+      "lon": 38.9,
+      "alt": 80
+    },
+    {
+      "id": "oblivskaya",
+      "name": "Обливская",
+      "lat": 48.54,
+      "lon": 42.5,
+      "alt": 90
+    },
+    {
+      "id": "orlovskiy",
+      "name": "Орловский",
+      "lat": 46.87,
+      "lon": 42.05,
+      "alt": 100
+    },
+    {
+      "id": "peschanokopskoye",
+      "name": "Песчанокопское",
+      "lat": 46.17,
+      "lon": 41.29,
+      "alt": 90
+    },
+    {
+      "id": "proletarsk",
+      "name": "Пролетарск",
+      "lat": 46.7,
+      "lon": 41.72,
+      "alt": 30
+    },
+    {
+      "id": "remontnoye",
+      "name": "Ремонтное",
+      "lat": 46.47,
+      "lon": 43.44,
+      "alt": 80
+    },
+    {
+      "id": "rodionovo_nesv",
+      "name": "Родионово-Несветайская",
+      "lat": 47.61,
+      "lon": 39.7,
+      "alt": 120
+    },
+    {
+      "id": "sovetskaya",
+      "name": "Советская",
+      "lat": 49.01,
+      "lon": 42.12,
+      "alt": 80
+    },
+    {
+      "id": "tarasovskiy",
+      "name": "Тарасовский",
+      "lat": 48.73,
+      "lon": 40.36,
+      "alt": 130
+    },
+    {
+      "id": "tacinskaya",
+      "name": "Тацинская",
+      "lat": 48.19,
+      "lon": 41.28,
+      "alt": 100
+    },
+    {
+      "id": "tselina",
+      "name": "Целина",
+      "lat": 46.57,
+      "lon": 41.03,
+      "alt": 90
+    },
+    {
+      "id": "chertkovo",
+      "name": "Чертково",
+      "lat": 49.38,
+      "lon": 40.15,
+      "alt": 160
+    },
+    {
+      "id": "kamensk",
+      "name": "Каменск-Шахтинский",
+      "lat": 48.28,
+      "lon": 40.23,
+      "alt": 60
+    },
+    {
+      "id": "novoshahtinsk",
+      "name": "Новошахтинск",
+      "lat": 47.8,
+      "lon": 39.89,
+      "alt": 150
+    },
+    {
+      "id": "gukovo",
+      "name": "Гуково",
+      "lat": 48.05,
+      "lon": 39.95,
+      "alt": 250
+    },
+    {
+      "id": "zverevo",
+      "name": "Зверево",
+      "lat": 48.04,
+      "lon": 40.12,
+      "alt": 240
+    },
+    {
+      "id": "donetsk_ro",
+      "name": "Донецк",
+      "lat": 48.34,
+      "lon": 39.95,
+      "alt": 130
+    }
+  ],
+  "metar": [
+    {
+      "icao": "URRP",
+      "name": "Ростов-на-Дону (Платов)",
+      "lat": 47.49,
+      "lon": 39.93
+    },
+    {
+      "icao": "URWW",
+      "name": "Волгоград (Гумрак)",
+      "lat": 48.78,
+      "lon": 44.34
+    },
+    {
+      "icao": "URKK",
+      "name": "Краснодар (Пашковский)",
+      "lat": 45.03,
+      "lon": 39.17
+    },
+    {
+      "icao": "URWI",
+      "name": "Элиста",
+      "lat": 46.38,
+      "lon": 44.33
+    },
+    {
+      "icao": "UUOO",
+      "name": "Воронеж",
+      "lat": 51.7,
+      "lon": 39.23
+    },
+    {
+      "icao": "URMT",
+      "name": "Ставрополь (Шпаковское)",
+      "lat": 45.11,
+      "lon": 42.11
+    },
+    {
+      "icao": "URMM",
+      "name": "Минеральные Воды",
+      "lat": 44.23,
+      "lon": 43.08
+    }
+  ]
+}

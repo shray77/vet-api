@@ -1,0 +1,8 @@
+name = "vet-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "VET_KV"
+id = "209d8f20af1f45519eac0b448919f1d1"

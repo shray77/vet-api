@@ -1,0 +1,30 @@
+name: Deploy vet-api
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-vet-api
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wrangler-version: "4.139.0"
+
+      - name: Smoke-test
+        run: |
+          sleep 5
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 30 "https://vet-api.shray77.workers.dev/v1/health")
+          echo "health: HTTP $code $(cat /tmp/health.json)"
+          [ "$code" = "200" ] || exit 1

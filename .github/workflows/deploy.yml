@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # bun.lock в репо → wrangler-action ставит wrangler через bun
+      - uses: oven-sh/setup-bun@v2
+
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -28,3 +31,6 @@ jobs:
           code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 30 "https://vet-api.shray77.workers.dev/v1/health")
           echo "health: HTTP $code $(cat /tmp/health.json)"
           [ "$code" = "200" ] || exit 1
+          code2=$(curl -s -o /tmp/status.json -w "%{http_code}" --max-time 30 "https://vet-api.shray77.workers.dev/v1/insilico/status")
+          echo "insilico/status: HTTP $code2 $(cat /tmp/status.json)"
+          [ "$code2" = "200" ] || exit 1

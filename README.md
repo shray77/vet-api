@@ -20,9 +20,28 @@ fallback на закоммиченный JSON; GitHub Actions раннеры д�
 | POST | `/v1/heatmap/mirror` | Bearer | зеркалирование датасета в KV |
 | GET | `/v1/heatmap/dataset` | — | KV-зеркало канонического датасета |
 | GET | `/v1/heatmap/delta?since=ISO` | — | дельта вспышек новее `since` (live-клиенты) |
+| GET | `/v1/insilico/status` | — | диагностика insilico-слоя (kv, ai вкл/выкл, вспышек в KV) |
+| GET | `/v1/insilico/outbreaks` | — | фильтр живого датасета: `?q=&disease=&species=&since=&limit=` |
+| POST | `/v1/insilico/share` | — | сохранить сценарий расчёта → короткий id (10/день/IP, payload ≤24KB, TTL 90д) |
+| GET | `/v1/insilico/share/:id` | — | прочитать сценарий |
+| POST | `/v1/insilico/ai/chat` | — | LLM-прокси (Qwen2.5-Coder-3B через HF router), 40/день/IP, кэш 24ч |
+| POST | `/v1/insilico/ai/esm` | — | ESM-2 fill-mask прокси, те же лимиты |
 
-POST-эндпоинты требуют `Authorization: Bearer $VET_API_TOKEN`
+POST-эндпоинты `heatmap/*` требуют `Authorization: Bearer $VET_API_TOKEN`
 (секрет воркера, генерируется `openssl rand -hex 32`).
+
+Insilico-эндпоинты публичны (CORS `*`): лимиты по IP через KV-счётчики.
+Облачный AI включается секретом воркера `HF_TOKEN` (HF-токен с доступом к
+Inference API): без него `/v1/insilico/ai/*` честно отвечает `501 {enabled:false}` —
+фронт VetInSilico сам падает в фолбэк (токен юзера → детерминированные алгоритмы).
+
+## Смена секретов воркера
+
+```
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/vet-api/secrets" \
+  -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"HF_TOKEN","text":"hf_...","type":"secret_text"}'
+```
 
 ## Деплой
 

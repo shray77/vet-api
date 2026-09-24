@@ -12,7 +12,7 @@
  *   5. Reassign sequential IDs.
  */
 
-type SourceKey = "fsvps" | "wahis" | "efsa" | "telegram" | "curated";
+export type SourceKey = "fsvps" | "wahis" | "efsa" | "telegram" | "curated";
 
 export interface Outbreak {
   id: number;

@@ -19,10 +19,13 @@
  */
 import { computeSlice } from "./meteo";
 import { mergeHeatmap, type Outbreak, type OutbreakDataset, type SourceKey } from "./merge";
+import { handleInsilico } from "./insilico";
 
 export interface Env {
   VET_KV: KVNamespace;
   VET_API_TOKEN: string;
+  /** Секрет (опционально): включает облачный AI-прокси /v1/insilico/ai/*. */
+  HF_TOKEN?: string;
 }
 
 const CORS: Record<string, string> = {
@@ -87,7 +90,7 @@ export default {
 
     /* ---------- meteo ---------- */
     if (req.method === "GET" && path === "/v1/meteo/slice") {
-      const cache = caches.default;
+      const cache = (caches as unknown as { default: Cache }).default;
       const hit = await cache.match(req);
       if (hit) return hit;
       const out = await computeSlice();
@@ -126,6 +129,10 @@ export default {
       ctx.waitUntil(
         env.VET_KV.put("hm:latest", JSON.stringify(dataset), { expirationTtl: 2592000 }),
       );
+      // hm:meta — компактный срез для /v1/insilico/status (без парсинга 2.7MB датасета)
+      ctx.waitUntil(
+        env.VET_KV.put("hm:meta", JSON.stringify({ total: dataset.total_outbreaks, updated: dataset.updated }), { expirationTtl: 2592000 }),
+      );
       return json({ ok: true, dataset, hash, computeMs }, 200, { "x-compute-ms": String(computeMs) });
     }
 
@@ -138,8 +145,15 @@ export default {
       ctx.waitUntil(
         env.VET_KV.put("hm:latest", JSON.stringify(body.dataset), { expirationTtl: 2592000 }),
       );
+      ctx.waitUntil(
+        env.VET_KV.put("hm:meta", JSON.stringify({ total: body.dataset.total_outbreaks ?? body.dataset.outbreaks.length, updated: body.dataset.updated }), { expirationTtl: 2592000 }),
+      );
       return json({ ok: true, mirrored: true, total: body.dataset.outbreaks.length });
     }
+
+    /* ---------- insilico (полу-динамика VetInSilico Hub) ---------- */
+    const ins = await handleInsilico(req, env, url, t0, ctx);
+    if (ins) return ins;
 
     if (req.method === "GET" && path === "/v1/heatmap/dataset") {
       const d = await env.VET_KV.get("hm:latest");
@@ -166,7 +180,7 @@ export default {
       {
         ok: false,
         error: "not found",
-        hint: "/v1/health, /v1/meteo/{slice,latest}, /v1/heatmap/{merge,mirror,dataset,delta}",
+        hint: "/v1/health, /v1/meteo/{slice,latest}, /v1/heatmap/{merge,mirror,dataset,delta}, /v1/insilico/{status,outbreaks,share,share/:id,ai/chat,ai/esm}",
       },
       404,
     );

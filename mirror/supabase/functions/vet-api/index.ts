@@ -30,8 +30,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response(null, { status: 204, headers: CORS });
   }
 
-  // Supabase отдаёт функцию на /functions/v1/vet-api/<path>
-  const path = url.pathname.replace(/^\/functions\/v1\/vet-api/, "") || "/";
+  // Supabase отдаёт функцию на /functions/v1/vet-api/<path>; CLI/будущие
+  // версии гейтвея могут отдавать без префикса — срезаем любой сегмент.
+  // ⚠️ НЕ вставляйте сюда deno-proxy.ts: его guard рассчитан на путь без
+  // префикса и под Supabase всегда отвечает 404 "only /v1/* is proxied".
+  const path = url.pathname.replace(/^\/functions\/v1\/[^/]+/, "") || "/";
 
   // Проксируем только публичный API — никаких чужих путей
   if (!path.startsWith("/v1/")) {

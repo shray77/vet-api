@@ -35,7 +35,9 @@ supabase-варианте ниже.
 2. supabase.com → Sign in with GitHub → **New project** (free tier, регион
    ближе — Europe). Запиши `<project-ref>` из URL проекта.
 3. Dashboard → **Edge Functions** → Create a new function → имя `vet-api` →
-   вставить содержимое `supabase/functions/vet-api/index.ts` → Deploy.
+   вставить содержимое `mirror/supabase/functions/vet-api/index.ts` (⚠️ именно
+   его, НЕ `deno-proxy.ts` — денo-вариант под Supabase всегда отвечает
+   404 "only /v1/* is proxied") → Deploy.
    У функции выключи **Verify JWT** (или деплой через CLI:
    `supabase functions deploy vet-api --no-verify-jwt`).
 4. Проверка: `curl https://<project-ref>.supabase.co/functions/v1/vet-api/v1/health`

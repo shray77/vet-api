@@ -10,3 +10,8 @@ id = "209d8f20af1f45519eac0b448919f1d1"
 # Workers AI (эдж): LLM-канал без внешних токенов. Free tier ~10k neurons/день.
 [ai]
 binding = "AI"
+
+# Релей-секрет зеркал (public by design — «защищает» только от случайного
+# дележа лимита зеркалом; см. mirror/README.md). Значение намеренно в репо.
+[vars]
+RELAY_SECRET = "973d1b2057ea78b04768f4132abd1d05"

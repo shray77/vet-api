@@ -26,6 +26,9 @@ export interface InsilicoEnv {
   AI?: unknown;
   /** Опциональный секрет: HF-фолбэк (нужен прежде всего для ESM-2 — у эджа протеиновой LM нет). */
   HF_TOKEN?: string;
+  /** Секрет релея-зеркала (public by design, см. mirror/): разрешает зеркалу
+   *  подменять IP для rate-limit через X-Forwarded-For. */
+  RELAY_SECRET?: string;
 }
 
 /* ---------- helpers ---------- */
@@ -67,7 +70,22 @@ function shareId(): string {
   return id;
 }
 
-function clientIp(req: Request): string {
+function timingSafeEq(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+function clientIp(req: Request, env?: InsilicoEnv): string {
+  // За релеем-зеркалом (mirror/*) cf-connecting-ip = IP зеркала, и все клиенты
+  // делили бы один лимит. Доверяем X-Forwarded-For только при валидном
+  // релей-секрете (public by design — лимиты вежливые, не защита).
+  const relay = req.headers.get("x-vetapi-relay") ?? "";
+  if (env?.RELAY_SECRET && relay && timingSafeEq(relay, env.RELAY_SECRET)) {
+    const xff = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+    if (xff) return xff;
+  }
   return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "anon";
 }
 
@@ -85,7 +103,7 @@ function bumpStat(env: InsilicoEnv, ctx: ExecutionContext, kind: string): void {
 /** Best-effort счётчик запросов в KV: ключ rl:<domain>:<YYYYMMDD>:<ip> → n. */
 async function rateLimit(env: InsilicoEnv, domain: string, req: Request, max: number): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const key = `rl:${domain}:${day}:${clientIp(req)}`;
+  const key = `rl:${domain}:${day}:${clientIp(req, env)}`;
   const cur = parseInt((await env.VET_KV.get(key)) ?? "0", 10);
   if (Number.isNaN(cur) || cur < 0) return false;
   if (cur >= max) return false;

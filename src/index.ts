@@ -28,6 +28,9 @@ export interface Env {
   AI?: unknown;
   /** Секрет (опционально): HF-фолбэк для chat + единственный облачный путь для ESM-2. */
   HF_TOKEN?: string;
+  /** Секрет релея-зеркала (public by design, см. mirror/): разрешает зеркалу
+   *  передавать реальный IP клиента в X-Forwarded-For для rate-limit. */
+  RELAY_SECRET?: string;
 }
 
 const CORS: Record<string, string> = {

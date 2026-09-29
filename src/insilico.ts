@@ -71,6 +71,17 @@ function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "anon";
 }
 
+/** Счётчик использования (глобальный, без IP): stats:<kind>:<YYYYMMDD> → n, TTL 7д. Приблизительный (KV race ок). */
+function bumpStat(env: InsilicoEnv, ctx: ExecutionContext, kind: string): void {
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const key = `stats:${kind}:${day}`;
+  ctx.waitUntil(
+    env.VET_KV.get(key)
+      .then((v) => env.VET_KV.put(key, String((parseInt(v ?? "0", 10) || 0) + 1), { expirationTtl: 7 * 86400 }))
+      .catch(() => {}),
+  );
+}
+
 /** Best-effort счётчик запросов в KV: ключ rl:<domain>:<YYYYMMDD>:<ip> → n. */
 async function rateLimit(env: InsilicoEnv, domain: string, req: Request, max: number): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -216,6 +227,7 @@ export async function handleInsilico(
       v: 1,
     };
     await env.VET_KV.put(`share:${id}`, JSON.stringify(record), { expirationTtl: SHARE_TTL });
+    bumpStat(env, ctx, "share");
     return json({ ok: true, id, bytes: payloadStr.length, expiresInDays: 90 }, 200);
   }
 
@@ -226,6 +238,40 @@ export async function handleInsilico(
     const raw = await env.VET_KV.get(`share:${id}`);
     if (!raw) return json({ ok: false, error: "not found (или истёк 90-дневный TTL)" }, 404);
     return rawJson(raw, 200, { "cache-control": "public, max-age=60" });
+  }
+
+  /* ----- stats: публичная агрегированная статистика использования (7 дней) ----- */
+  if (req.method === "GET" && sub === "/stats") {
+    const kinds = ["chat", "chat-hit", "esm", "share"] as const;
+    const field = { chat: "aiChat", "chat-hit": "aiChatHits", esm: "aiEsm", share: "shares" } as const;
+    const week = await Promise.all(
+      [0, 1, 2, 3, 4, 5, 6].map(async (i) => {
+        const d = new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10).replace(/-/g, "");
+        const row: Record<string, string | number> = { date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` };
+        await Promise.all(
+          kinds.map(async (k) => {
+            const v = await env.VET_KV.get(`stats:${k}:${d}`);
+            row[field[k]] = parseInt(v ?? "0", 10) || 0;
+          }),
+        );
+        return row;
+      }),
+    );
+    return json(
+      {
+        ok: true,
+        today: {
+          aiChat: week[0].aiChat,
+          aiChatHits: week[0].aiChatHits,
+          aiEsm: week[0].aiEsm,
+          shares: week[0].shares,
+        },
+        week,
+        aiBackend: env.AI ? "workers-ai" : env.HF_TOKEN ? "hf" : "off",
+      },
+      200,
+      { "cache-control": "public, max-age=300" },
+    );
   }
 
   /* ----- AI: LLM chat / ESM прокси ----- */
@@ -279,6 +325,7 @@ async function handleAi(
   const cacheKey = `ai:${kind}:${await sha256(JSON.stringify(body))}`;
   const cached = await env.VET_KV.get(cacheKey);
   if (cached) {
+    bumpStat(env, ctx, `${kind}-hit`);
     return json({ ...JSON.parse(cached), cached: true, ms: Date.now() - t0 }, 200, {
       "cache-control": "public, max-age=300",
     });
@@ -296,6 +343,7 @@ async function handleAi(
           clampNum(b.temperature, 0, 2, 0.3),
         );
         const out = { ok: true, kind, content, backend: "workers-ai" };
+        bumpStat(env, ctx, "chat");
         ctx.waitUntil(env.VET_KV.put(cacheKey, JSON.stringify(out), { expirationTtl: AI_CACHE_TTL }));
         return json({ ...out, cached: false, ms: Date.now() - t0 }, 200);
       } catch (e) {
@@ -382,6 +430,7 @@ async function handleAi(
     } catch {}
     if (!content) return json({ ok: false, upstream: res.status, error: "пустой ответ от LLM" }, 502);
     out = { ok: true, kind, content };
+    bumpStat(env, ctx, "chat");
   } else {
     let data: unknown;
     try {
@@ -390,6 +439,7 @@ async function handleAi(
       return json({ ok: false, upstream: res.status, error: "non-json upstream" }, 502);
     }
     out = { ok: true, kind, data };
+    bumpStat(env, ctx, "esm");
   }
 
   ctx.waitUntil(env.VET_KV.put(cacheKey, JSON.stringify(out), { expirationTtl: AI_CACHE_TTL }));

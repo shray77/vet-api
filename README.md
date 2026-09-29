@@ -24,6 +24,7 @@ fallback на закоммиченный JSON; GitHub Actions раннеры д�
 | GET | `/v1/insilico/outbreaks` | — | фильтр живого датасета: `?q=&disease=&species=&since=&limit=` |
 | POST | `/v1/insilico/share` | — | сохранить сценарий расчёта → короткий id (10/день/IP, payload ≤24KB, TTL 90д) |
 | GET | `/v1/insilico/share/:id` | — | прочитать сценарий |
+| GET | `/v1/insilico/stats` | — | агрегированная статистика использования за 7 дней (без IP), кэш 5 мин |
 | POST | `/v1/insilico/ai/chat` | — | LLM: канал 1 Workers AI (llama-3.3-70b, эдж, без токенов) → канал 2 HF router; 40/день/IP, кэш 24ч |
 | POST | `/v1/insilico/ai/esm` | — | ESM-2 fill-mask прокси (только HF), те же лимиты |
 

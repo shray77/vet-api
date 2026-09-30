@@ -114,6 +114,9 @@ async function rateLimit(env: InsilicoEnv, domain: string, req: Request, max: nu
 
 /** Эдж-LLM на Workers AI: free tier ~10k neurons/день, ноль внешних токенов. */
 const WA_LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+// 70b плавающе отдаёт пустой response (воспроизводится на JSON-схемах в system):
+// фолбэк 8b-fast держит канал живым без медленного pollinations на фронте.
+const WA_LLM_FALLBACK = "@cf/meta/llama-3.1-8b-instruct-fast";
 /** HF-фолбэк (и путь для ESM-2). */
 const LLM_MODEL = "Qwen/Qwen2.5-Coder-3B-Instruct";
 const ESM_MODEL_DEFAULT = "facebook/esm2_t12_35M_UR50D";
@@ -315,14 +318,25 @@ async function waChat(
   const ai = env.AI as unknown as {
     run: (model: string, input: Record<string, unknown>) => Promise<unknown>;
   };
-  const out = (await ai.run(WA_LLM_MODEL, {
-    messages,
-    max_tokens: maxTokens,
-    temperature,
-  })) as { response?: unknown };
-  const text = typeof out?.response === "string" ? out.response.trim() : "";
-  if (!text) throw new Error("пустой ответ модели");
-  return text;
+  // Порядок: 70b → ретрай 70b → 8b-fast. Пустой ответ у 70b бывает плавающим,
+  // ретрай в том же запросе дешевле, чем 502 → фронт → pollinations (30-60 с).
+  const attempts = [WA_LLM_MODEL, WA_LLM_MODEL, WA_LLM_FALLBACK];
+  let lastNote = "";
+  for (const model of attempts) {
+    try {
+      const out = (await ai.run(model, {
+        messages,
+        max_tokens: maxTokens,
+        temperature,
+      })) as { response?: unknown };
+      const text = typeof out?.response === "string" ? out.response.trim() : "";
+      if (text) return text;
+      lastNote = `${model}: пустой ответ`;
+    } catch (e) {
+      lastNote = `${model}: ${String(e).slice(0, 80)}`;
+    }
+  }
+  throw new Error(`пустой ответ модели (${lastNote})`);
 }
 
 async function handleAi(

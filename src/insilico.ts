@@ -321,15 +321,24 @@ async function waChat(
   // Порядок: 70b → ретрай 70b → 8b-fast. Пустой ответ у 70b бывает плавающим,
   // ретрай в том же запросе дешевле, чем 502 → фронт → pollinations (30-60 с).
   const attempts = [WA_LLM_MODEL, WA_LLM_MODEL, WA_LLM_FALLBACK];
+  // Дедлайны попыток: фронт ждёт 60 с. Ханг модели (бывает) не должен съедать
+  // весь бюджет: 20+12+18 = 50 с в худшем случае, ответ всегда укладывается.
+  const deadlines = [20_000, 12_000, 18_000];
   let lastNote = "";
-  for (const model of attempts) {
+  for (let i = 0; i < attempts.length; i++) {
+    const model = attempts[i];
     try {
-      const out = (await ai.run(model, {
-        messages,
-        max_tokens: maxTokens,
-        temperature,
-        stream: false,
-      })) as { response?: unknown };
+      const out = (await Promise.race([
+        ai.run(model, {
+          messages,
+          max_tokens: maxTokens,
+          temperature,
+          stream: false,
+        }),
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error(`дедлайн попытки ${Math.round(deadlines[i] / 1000)}с`)), deadlines[i]),
+        ),
+      ])) as { response?: unknown };
       // Workers AI отдаёт response строкой, но на строгих JSON-промптах ответ
       // приходит УЖЕ РАСПАРСЕННЫМ объектом/массивом — сериализуем обратно:
       // extractJson на фронте ждёт строку с JSON внутри.

@@ -328,10 +328,20 @@ async function waChat(
         messages,
         max_tokens: maxTokens,
         temperature,
+        stream: false,
       })) as { response?: unknown };
-      const text = typeof out?.response === "string" ? out.response.trim() : "";
+      // Workers AI отдаёт response строкой, но на строгих JSON-промптах ответ
+      // приходит УЖЕ РАСПАРСЕННЫМ объектом/массивом — сериализуем обратно:
+      // extractJson на фронте ждёт строку с JSON внутри.
+      const resp = (out as { response?: unknown })?.response;
+      const text =
+        typeof resp === "string"
+          ? resp.trim()
+          : resp != null && typeof resp === "object"
+            ? JSON.stringify(resp)
+            : "";
       if (text) return text;
-      lastNote = `${model}: пустой ответ`;
+      lastNote = `${model}: пустой ответ (raw=${JSON.stringify(out ?? null).slice(0, 140)})`;
     } catch (e) {
       lastNote = `${model}: ${String(e).slice(0, 80)}`;
     }
